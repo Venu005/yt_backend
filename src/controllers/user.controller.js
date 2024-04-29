@@ -62,4 +62,90 @@ const registerUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, createdUser, "User registered successfully"));
 });
 
-export { registerUser };
+const genAccessTokenAndRefreshToken = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    const accessToken = await user.generateAccessToken();
+    const refreshToken = await user.generateRefreshToken();
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false }); //because there is noo need to validate according to my algo if the user is reaching this point it means the user is validated
+
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError("Soemthing went wrong when generating tokens", 500);
+  }
+};
+const loginUser = asyncHandler(async (req, res) => {
+  //check the mail and password and compare them
+  // if mail or username and password matches then login success,
+  // if login is success then generate acess token and refresh token
+  //send the tokens as cookies
+
+  const { username, email, password } = await req.body;
+  console.log(username,email)
+  if (!username && !email) {
+    throw new ApiError("Email or username required", 401);
+  }
+  const user = await User.findOne({ $or: [{ email }, { username }] });
+  if (!user) {
+    throw new ApiError("User unauthorized", 401);
+  }
+  const verPassword = await user.comparePassword(password);
+  if (!verPassword) {
+    throw new ApiError("Password is wrong", 401);
+  }
+  // THERE IS NO ACCESS TOKEN FIELD
+  // const accessToken = await user.generateAccessToken();
+  // const refreshToken = await user.generateRefreshToken();
+  // const completeUser = User.findByIdAndUpdate(user._id, {
+  //   accessToken,
+  //   refreshToken,
+  // });
+  //prettier-ignore
+  const { accessToken, refreshToken } = await genAccessTokenAndRefreshToken(user._id);
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user: user,
+          accessToken,
+          refreshToken,
+        },
+        "User logged in successfully"
+      )
+    );
+});
+const logOutUser = asyncHandler(async (req, res) => {
+  //clear cookies and  remove refresh token
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        refreshToken: undefined,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(new ApiResponse(200, {}, "User logged out successfully"));
+});
+export { registerUser, loginUser, logOutUser };
