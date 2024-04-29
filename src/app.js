@@ -17,4 +17,4 @@ app.use(
 );
 
 app.use(express.static("public")); // static files from public folder
-app.use(cokieeParser());
+app.use(cookieParser());

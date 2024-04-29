@@ -1,6 +1,6 @@
-import { app } from "./app";
-import { PORT } from "./constants";
-import dbConnect from "./db/connection";
+import { app } from "./app.js";
+import { PORT } from "./constants.js";
+import dbConnect from "./db/connection.js";
 import dotenv from "dotenv";
 ///TODO: npm i dotenv
 dotenv.config({
