@@ -2,7 +2,6 @@ import express from "express";
 export const app = express();
 import cors from "cors";
 import cookieParser from "cookie-parser";
-//TODO: npm i cors cookie-parser
 app.use(cors()); //has options too
 app.use(
   express.json({
@@ -18,3 +17,6 @@ app.use(
 
 app.use(express.static("public")); // static files from public folder
 app.use(cookieParser());
+
+import { userRouter } from "./routes/user.routes.js";
+app.use("/api/v1/users", userRouter);

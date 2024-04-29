@@ -1,6 +1,7 @@
 const asyncHandler = (fn) => async (req, res, next) => {
   try {
-    await fn(req, res, next);
+    const refunc = await fn(req, res, next);
+    return refunc;
   } catch (error) {
     res.status(500 || error.code).json({
       success: false,
