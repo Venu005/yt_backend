@@ -17,6 +17,10 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      match: [
+        /[\x00-\x7F]+@[\x00-\x7F]+\.(com|in|org)/,
+        "Please enter a valid email id",
+      ],
     },
     fullname: {
       type: String,
