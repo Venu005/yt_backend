@@ -10,15 +10,25 @@ const registerUser = asyncHandler(async (req, res) => {
   ) {
     throw new ApiError("All fields are required", 400);
   }
-  const existingUser = await existingUser.findOne({
+  const existingUser = await User.findOne({
     $or: [{ email }, { username }],
   });
   if (existingUser) {
     throw new ApiError("User already exists", 409);
   }
   console.log(req.files); // multer gives us req.files --- files that are actuallly uploaded
+  console.log(req.files);
   const avatarLocalPath = await req.files?.avatar[0]?.path;
-  const coverImageLocalPath = await req.files?.coverImage[0]?.path;
+  //const coverImageLocalPath = await req.files?.coverImage[0]?.path; // here we are trying to access path when coveImage is not existing at all
+  let coverImageLocalPath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = await req.files.coverImage[0].path;
+  }
+
   if (!avatarLocalPath) {
     throw new ApiError("Avatar file is required", 400);
   }
@@ -46,6 +56,7 @@ const registerUser = asyncHandler(async (req, res) => {
   if (!createdUser) {
     throw new ApiError("Something went wrong while registering user", 500);
   }
+
   return res
     .status(201)
     .json(new ApiResponse(200, createdUser, "User registered successfully"));
