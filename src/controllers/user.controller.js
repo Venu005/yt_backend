@@ -4,6 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.js";
 import { fileUpload } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
+import { deleteOldImage } from "../utils/deleteImage.js";
 const registerUser = asyncHandler(async (req, res) => {
   const { username, email, password, fullname } = await req.body;
   if (
@@ -253,6 +254,11 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
 //TODO: to update files we should be using two middle wares multer and auth
 const updateUserAvatar = asyncHandler(async (req, res) => {
+  const avatar = req.user?.avatar;
+  const deletedImage = await deleteOldImage(avatar.public_id);
+  if (!deletedImage) {
+    return new ApiError("Failed to delete the old image", 500);
+  }
   //TODO: if error in avatar path updtaion change to await req.file?.path
   const newavatarLocalPath = await req.files?.avatar[0]?.path;
   if (!newavatarLocalPath) {
@@ -280,6 +286,11 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
+  const oldCoverImage = req.user?.coverImage;
+  const deletedImage = await deleteOldImage(oldCoverImage.public_id);
+  if (!deletedImage) {
+    return new ApiError("Error in deleting the image", 400);
+  }
   const coverImageLocalPath = await req.file?.path;
   if (!coverImageLocalPath) {
     throw new ApiError("CoverImage missing", 400);
