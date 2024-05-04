@@ -193,4 +193,128 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     throw new ApiError("Invalid refresh token" || error?.message, 401);
   }
 });
-export { registerUser, loginUser, logOutUser, refreshAccessToken };
+
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  // get data from tokens and check if refresh token exists
+  // get ids from tokens and change password
+  const { oldPassword, newPassword } = await req.body;
+  // if changing password then he/she is logged in so from verifyJWt  we can get user  req.user = user;
+  const user = await User.findById(req.user?._id);
+  const isPasswordCorrect = await user.comparePassword(oldPassword);
+  if (!isPasswordCorrect) {
+    throw new ApiError("Invalid old password", 400);
+  }
+
+  user.password = newPassword;
+
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Password updated successfully"));
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(200, req.user, "Current user fetched successfully");
+});
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { username, fullname } = await req.body;
+  //MY WAY
+  // const user = await User.findById(req.user?._id);
+  // if (!user) {
+  //   throw ApiError("User not found", 401);
+  // }
+  // user.username = username;
+  // user.fullname = fullname;
+  // await User.save({ validateBeforeSave: false });
+
+  // can also use findByIdAndUpdate
+  //OTHER APPROACH
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        username,
+        fullname,
+      },
+    },
+    {
+      new: true, //  returns the updated version
+    }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(200, user, "Username and fullname updated successfully");
+});
+
+//TODO: to update files we should be using two middle wares multer and auth
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  //TODO: if error in avatar path updtaion change to await req.file?.path
+  const newavatarLocalPath = await req.files?.avatar[0]?.path;
+  if (!newavatarLocalPath) {
+    return new ApiError("Avatar file is missing", 400);
+  }
+  const newAvatar = await fileUpload(newavatarLocalPath);
+  if (!newAvatar.url) {
+    return new ApiError("Avatar failed to upload to cloudinary", 400);
+  }
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        avatar: newAvatar.url, // update the url alone cause its in model
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "avatar updated successfully"));
+});
+
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  const coverImageLocalPath = await req.file?.path;
+  if (!coverImageLocalPath) {
+    throw new ApiError("CoverImage missing", 400);
+  }
+  const coverImage = await fileUpload(coverImageLocalPath);
+  if (!coverImage.url) {
+    return new ApiError(
+      "Cover image failed ehile uploading to cloudinary",
+      400
+    );
+  }
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        coverImage: coverImage.url,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "CoverImage updated successfully"));
+});
+export {
+  registerUser,
+  loginUser,
+  logOutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage,
+};
