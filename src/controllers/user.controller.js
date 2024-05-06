@@ -318,6 +318,87 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, user, "CoverImage updated successfully"));
 });
+
+const getChannelInfo = asyncHandler(async (req, res) => {
+  const { username } = req.params; // ? username is channel's username
+  if (!username) {
+    throw new ApiError("Username is missing in params", 400);
+  }
+  const channel = await User.aggregate([
+    {
+      $match: {
+        username: username?.tolowerCase(),
+      },
+    },
+    {
+      /**
+       *  * Here we are trying to get the total number of channel subscribers
+       *  * So when a mongo document is created say for channel and subscriber, we should count the total number of documents which have the channel name in order to get total subscibers
+       *  * so in the foreign field we write "channel" insted of "subscribers"
+       *  * so we will be getting no of users that subscribed this channel
+       *  ! Understanding the above logic is very much important
+       *   
+       *
+       */
+    
+      
+      $lookup: {
+        from: "Subscription",
+        localField: "_id", // how is it stored in this schema
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    // * Here we are trying to get the no of channels subscribed by the user
+    {
+      $lookup: {
+        from: "Subscription",
+        localField: "_id",
+        foreignField: "subscribers",
+        as: "subscribedTo",
+      },
+    },
+    // * now that both subscibers and subscribedTo are present we need to add them to the schema
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers", // * this is as in $look up
+        },
+        subscribedCount: {
+          $size: "$subscribedTo", // * total count
+        },
+        isSubscribed: {
+          $cond: {
+            if: {
+              $in: [req.user?._id, "$subscribers.subscribers"], // *imp: here we are checking if the logged in user (req.user?._id) is present in the subscribers
+            },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      // projection in relational algebra
+      $project: {
+        username: 1,
+        subscribersCount: 1,
+        subscribedCount: 1,
+        isSubscribed: 1,
+        avatar: 1,
+        coverImage: 1,
+      },
+    },
+  ]);
+  if (!channel?.length) {
+    throw new ApiError("Channel not found", 404);
+  }
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, channel[0], "Channel info fetched successfully")
+    );
+});
 export {
   registerUser,
   loginUser,
@@ -328,4 +409,5 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getChannelInfo,
 };
