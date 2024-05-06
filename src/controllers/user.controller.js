@@ -5,6 +5,7 @@ import { User } from "../models/user.js";
 import { fileUpload } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 import { deleteOldImage } from "../utils/deleteImage.js";
+import mongoose from "mongoose";
 const registerUser = asyncHandler(async (req, res) => {
   const { username, email, password, fullname } = await req.body;
   if (
@@ -332,18 +333,18 @@ const getChannelInfo = asyncHandler(async (req, res) => {
     },
     {
       /**
+       *  * lookup is left join
        *  * Here we are trying to get the total number of channel subscribers
        *  * So when a mongo document is created say for channel and subscriber, we should count the total number of documents which have the channel name in order to get total subscibers
        *  * so in the foreign field we write "channel" insted of "subscribers"
        *  * so we will be getting no of users that subscribed this channel
        *  ! Understanding the above logic is very much important
-       *   
+       *
        *
        */
-    
-      
+
       $lookup: {
-        from: "Subscription",
+        from: "subscriptions", //! plural form written
         localField: "_id", // how is it stored in this schema
         foreignField: "channel",
         as: "subscribers",
@@ -352,7 +353,7 @@ const getChannelInfo = asyncHandler(async (req, res) => {
     // * Here we are trying to get the no of channels subscribed by the user
     {
       $lookup: {
-        from: "Subscription",
+        from: "subscriptions",
         localField: "_id",
         foreignField: "subscribers",
         as: "subscribedTo",
@@ -399,6 +400,59 @@ const getChannelInfo = asyncHandler(async (req, res) => {
       new ApiResponse(200, channel[0], "Channel info fetched successfully")
     );
 });
+
+const getUserWatchHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id), //  here mongoose can't work directly so for id's this is how we do it, actually mongodb id's are actually objectids but via mongoose strings are returned
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        // * now that we get all the video details, but in order to get further details of the owner we write subpipelines
+        // ? one hack for from in lookup is the ref from where the type of that field is derived
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+  if (!user?.length) {
+    throw new ApiError("Error in finding user watch history", 500);
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user[0].watchHistory, "Watch Historysuccess"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -410,4 +464,5 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   getChannelInfo,
+  getUserWatchHistory,
 };
