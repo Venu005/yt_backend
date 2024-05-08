@@ -1,7 +1,7 @@
-import { Tweet } from "../models/tweet";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import { asyncHandler } from "../utils/asyncHandler";
+import { Tweet } from "../models/tweet.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 const createTweet = asyncHandler(async (req, res) => {
   const { content } = await req.body;
@@ -33,7 +33,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, tweets, "User tweets fetched"));
 });
-const updateTweet = asyncHandler(async (res, res) => {
+const updateTweet = asyncHandler(async (req, res) => {
   const { content } = await req.body;
   const user = req.user;
   if (!user) {
