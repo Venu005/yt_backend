@@ -22,3 +22,9 @@ import { userRouter } from "./routes/user.routes.js";
 app.use("/api/v1/users", userRouter);
 import { tweetRouter } from "./routes/tweet.routes.js";
 app.use("/api/v1/tweets", tweetRouter);
+import { commentRouter } from "./routes/comment.routes.js";
+app.use("/api/v1/comments", commentRouter);
+import { likeRouter } from "./routes/like.routes.js";
+app.use("/api/v1/likes", likeRouter);
+
+
