@@ -13,7 +13,7 @@ const createTweet = asyncHandler(async (req, res) => {
     throw new ApiError("User not authenticated", 401);
   }
   const tweet = await Tweet.create({
-    owner: user.username,
+    owner: user._id,
     content,
   });
 
@@ -27,7 +27,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
   if (!user) {
     throw new ApiError("User not authenticated", 401);
   }
-  const tweets = await Tweet.find({ owner: user.username });
+  const tweets = await Tweet.find({ owner: user._id });
 
   return res
     .status(200)
@@ -46,7 +46,7 @@ const updateTweet = asyncHandler(async (req, res) => {
   if (!tweetId) {
     throw new ApiError("Tweet ID is missing", 400);
   }
-  const tweet = Tweet.findByIdAndUpdate(
+  const tweet = await Tweet.findByIdAndUpdate(
     tweetId,
     {
       $set: {
